@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smile Preference Survey</title>
+  <style>
+    :root {
+      --navy: #18324f;
+      --blue: #245b8f;
+      --text: #243447;
+      --muted: #66788a;
+      --border: #d8e1eb;
+      --surface: #ffffff;
+      --page: #f4f7fb;
+      --accent: #e8f1fb;
+    }
+
+    * { box-sizing: border-box; }
+
+    .language-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(10, 25, 42, 0.72);
+    }
+    .language-popup {
+      width: min(420px, 100%); padding: 30px 26px; text-align: center;
+      background: #fff; border-radius: 16px; box-shadow: 0 18px 60px rgba(0,0,0,.25);
+    }
+    .language-popup h2 { margin: 0 0 8px; }
+    .language-popup p { margin: 0 0 22px; color: var(--muted); }
+    .language-options { display: flex; justify-content: center; gap: 12px; }
+    .language-options button { min-width: 125px; border: 0; border-radius: 9px; padding: 12px 18px; cursor: pointer; font-size: 1rem; font-weight: 700; }
+    .language-options button:first-child { color: white; background: var(--blue); }
+    .language-options button:last-child { color: var(--navy); background: #e8f1fb; }
+
+    .thankyou-overlay {
+      position: fixed; inset: 0; z-index: 10000; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+      background: rgba(10, 25, 42, 0.72);
+    }
+    .thankyou-popup {
+      width: min(460px, 100%); padding: 32px 26px; text-align: center;
+      background: #fff; border-radius: 18px; box-shadow: 0 18px 60px rgba(0,0,0,.25);
+    }
+    .thankyou-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .thankyou-popup h2 { margin: 0 0 10px; text-align: center; }
+    .thankyou-popup p { margin: 0 0 22px; color: var(--muted); }
+    .thankyou-popup button { min-width: 150px; }
+
+    body.lang-ar { direction: rtl; }
+    body.lang-ar .instructions, body.lang-ar .survey-section { text-align: right; }
+    body.lang-ar header, body.lang-ar header h1, body.lang-ar header p { text-align: center; }
+    body.lang-ar .section-heading { flex-direction: row; }
+    body.lang-ar .travel-ranking-layout { direction: rtl; }
+    body.lang-ar .rank-number { left: auto; right: 12px; }
+    body.lang-ar .travel-order-list .rank-number { left: auto; right: 8px; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      font-size: 17px;
+      color: var(--text);
+      background: var(--page);
+      line-height: 1.65;
+    }
+
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 32px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.65rem, 3vw, 2.25rem);
+      letter-spacing: 0.2px;
+    }
+
+    header p {
+      margin: 0;
+      color: #e0eaf4;
+      font-size: 1rem;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 28px auto 48px;
+    }
+
+    .instructions {
+      background: #eef5fc;
+      border: 1px solid #cbdff3;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+    }
+
+    .instructions strong { color: var(--navy); }
+
+    .survey-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      margin: 0 0 22px;
+      box-shadow: 0 4px 14px rgba(26, 50, 79, 0.04);
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: var(--navy);
+    }
+
+    .hint {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .count {
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .photo-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      min-height: 100px;
+    }
+
+    .photo-card {
+      position: relative;
+      min-width: 0;
+      border: 2px solid var(--border);
+      border-radius: 11px;
+      padding: 8px;
+      background: white;
+      cursor: grab;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+      user-select: none;
+    }
+
+    .photo-card:hover {
+      border-color: #8eafcf;
+      box-shadow: 0 5px 14px rgba(24, 50, 79, 0.1);
+    }
+
+    .photo-card:focus-visible {
+      outline: 3px solid #79aee6;
+      outline-offset: 3px;
+    }
+
+    .photo-card.dragging {
+      opacity: 0.45;
+      transform: scale(0.98);
+      cursor: grabbing;
+    }
+
+    .photo-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 6px;
+      pointer-events: none;
+      background: #e8edf3;
+    }
+
+    /* CSS places a visible ranking number over each photo. */
+    .rank-number {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: white;
+      background: var(--navy);
+      border: 2px solid rgba(255,255,255,0.95);
+      font-size: 0.9rem;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+
+    /* Question 2 uses click-to-rank instead of drag and drop. */
+    [data-question="smiles2"] .photo-card {
+      cursor: pointer;
+    }
+
+    [data-question="smiles2"] .photo-card:focus-visible {
+      outline: 3px solid #79aee6;
+      outline-offset: 3px;
+    }
+
+    [data-question="smiles2"] .rank-number:empty {
+      display: none;
+    }
+
+    [data-question="smiles2"] .photo-card.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(36, 91, 143, 0.12);
+    }
+
+    .photo-label {
+      padding: 9px 3px 3px;
+      font-size: 0.93rem;
+      font-weight: 600;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .drop-target {
+      outline: 3px dashed #7aa8d5;
+      outline-offset: 3px;
+      background: var(--accent);
+    }
+
+
+
+    /* Question 3: drag photos from the left bank into a vertical ranking on the right. */
+    .travel-ranking-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .travel-panel {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f9fbfd;
+    }
+    .travel-panel h3 {
+      margin: 0 0 12px;
+      color: var(--navy);
+      font-size: 1rem;
+    }
+    .travel-panel h3 span {
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: normal;
+    }
+    .travel-photo-bank {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      min-height: 110px;
+    }
+    .travel-order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 160px;
+      padding: 10px;
+      border: 2px dashed #b8c9da;
+      border-radius: 9px;
+      background: white;
+    }
+    .travel-order-list .photo-card {
+      display: block;
+      width: calc(50% - 6px);
+      flex: 0 0 auto;
+      padding: 8px;
+      cursor: grab;
+    }
+    .travel-order-list .photo-card img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+    }
+    /* Question 3 shows only the photo and its ranking number. */
+    [data-question="smiles3"] .photo-label {
+      display: none;
+    }
+    .travel-order-list .rank-number:empty { display: none; }
+    .travel-order-list.drop-target,
+    .travel-photo-bank.drop-target {
+      outline: 3px dashed #7aa8d5;
+      outline-offset: 3px;
+      background: var(--accent);
+    }
+    .travel-drop-hint {
+      margin: auto;
+      padding: 20px 8px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .92rem;
+    }
+    @media (max-width: 760px) {
+      .travel-ranking-layout { grid-template-columns: 1fr; }
+      .travel-photo-bank { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 380px) {
+      .travel-photo-bank { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .travel-order-list .photo-card { width: calc(50% - 6px); }
+    }
+
+    .submit-area {
+      text-align: center;
+      padding: 10px 0 0;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 13px 30px;
+      min-width: 210px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    button:hover { background: #194a78; }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 3px solid #79aee6; outline-offset: 3px; }
+
+    #result {
+      display: none;
+      margin-top: 22px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    #result h2 { margin-bottom: 12px; }
+    #result pre {
+      overflow: auto;
+      background: #f2f5f8;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.86rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .photo-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .survey-section { padding: 16px; }
+    }
+
+    @media (max-width: 380px) {
+      main { width: min(100% - 20px, 1120px); }
+      .photo-list { gap: 9px; }
+      .photo-card { padding: 6px; }
+      .rank-number { top: 11px; left: 11px; width: 27px; height: 27px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="language-overlay" id="languageOverlay" role="dialog" aria-modal="true" aria-labelledby="languageTitle">
+    <div class="language-popup">
+      <h2 id="languageTitle">Choose your language</h2>
+      <p id="languagePrompt">Please select the language for this survey.</p>
+      <div class="language-options">
+        <button type="button" id="chooseEnglish">English</button>
+        <button type="button" id="chooseArabic">العربية</button>
+      </div>
+    </div>
+  </div>
+  <div class="thankyou-overlay" id="thankyouOverlay" role="dialog" aria-modal="true" aria-labelledby="thankyouTitle">
+    <div class="thankyou-popup">
+      <div class="thankyou-icon" aria-hidden="true">😊</div>
+      <h2 id="thankyouTitle">Thank you!</h2>
+      <p id="thankyouMessage">Thank you for completing the survey.</p>
+      <button type="button" id="closeThankyou">Close</button>
+    </div>
+  </div>
+  <header>
+    <h1>Smile Preference Survey</h1>
+    <p>Compare the smiles and rank the photos by your personal preference</p>
+  </header>
+
+  <main>
+    <div class="instructions">
+      <strong>Instructions:</strong>
+      Compare the smiles in the photos. For Questions 1 and 3, drag the photos into your preferred order. For Question 2, click the photos from your most preferred smile to your least preferred. There are no right or wrong answers.
+    </div>
+
+    <form id="surveyForm">
+      <section class="survey-section" data-question="smiles1">
+        <div class="section-heading">
+          <h2>Question 1 — Smiles</h2>
+          <span class="count">Rank all 4 images</span>
+        </div>
+        <p class="hint">Drag the photos to rank the smiles from most preferred to least preferred.</p>
+        <div class="photo-list" aria-label="Rank smile photos from most to least preferred">
+          <article class="photo-card" draggable="true" tabindex="0" data-id="smile-1" data-label="Smile 1">
+            <span class="rank-number">1</span>
+            <img src="./photo_1/stright.jpg" alt="Smile 1">
+            <div class="photo-label">Smile 1</div>
+          </article>
+          <article class="photo-card" draggable="true" tabindex="0" data-id="smile-2" data-label="Smile 2">
+            <span class="rank-number">2</span>
+            <img src="./photo_1/stright - 1mm into Green side without line.jpg" alt="Smile 2">
+            <div class="photo-label">Smile 2</div>
+          </article>
+          <article class="photo-card" draggable="true" tabindex="0" data-id="smile-3" data-label="Smile 3">
+            <span class="rank-number">3</span>
+            <img src="./photo_1/stright - 2mm into Green side without line.jpg" alt="Smile 3">
+            <div class="photo-label">Smile 3</div>
+          </article>
+          <article class="photo-card" draggable="true" tabindex="0" data-id="smile-4" data-label="Smile 4">
+            <span class="rank-number">4</span>
+            <img src="./photo_1/stright - 3mm into Green side without line.jpg" alt="Smile 4">
+            <div class="photo-label">Smile 4</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="survey-section" data-question="smiles2">
+        <div class="section-heading">
+          <h2>Question 2 — Smiles</h2>
+          <span class="count">Rank all 4 images</span>
+        </div>
+        <p class="hint">Click the photos from your most preferred smile to your least preferred. Numbers appear in the order you select them.</p>
+        <div class="photo-list" aria-label="Rank smile photos from most to least preferred">
+          <article class="photo-card" draggable="false" tabindex="0" data-id="smile-5" data-label="Smile 5">
+            <span class="rank-number" aria-label="Not ranked"></span>
+            <img src="./photo_1/stright.jpg" alt="Smile 5">
+            <div class="photo-label">Smile 5</div>
+          </article>
+          <article class="photo-card" draggable="false" tabindex="0" data-id="smile-6" data-label="Smile 6">
+            <span class="rank-number" aria-label="Not ranked"></span>
+            <img src="./photo_1/stright - 1mm into Green side without line.jpg" alt="Smile 6">
+            <div class="photo-label">Smile 6</div>
+          </article>
+          <article class="photo-card" draggable="false" tabindex="0" data-id="smile-7" data-label="Smile 7">
+            <span class="rank-number" aria-label="Not ranked"></span>
+            <img src="./photo_1/stright - 2mm into Green side without line.jpg" alt="Smile 7">
+            <div class="photo-label">Smile 7</div>
+          </article>
+          <article class="photo-card" draggable="false" tabindex="0" data-id="smile-8" data-label="Smile 8">
+            <span class="rank-number" aria-label="Not ranked"></span>
+            <img src="./photo_1/stright - 3mm into Green side without line.jpg" alt="Smile 8">
+            <div class="photo-label">Smile 8</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="survey-section" data-question="smiles3">
+        <div class="section-heading">
+          <h2>Question 3 — Smiles</h2>
+          <span class="count">Rank all 4 images</span>
+        </div>
+        <p class="hint">Drag each photo from the left into the ranking on the right. Put your most preferred smile at the top and your least preferred at the bottom. You can drag photos within the right column to change their order.</p>
+        <div class="travel-ranking-layout">
+          <div class="travel-panel">
+            <h3>Available smile photos</h3>
+            <div class="travel-photo-bank" id="travelPhotoBank" aria-label="Available smile photos">
+              <article class="photo-card" draggable="true" tabindex="0" data-id="smile-9" data-label="Smile 9">
+                <span class="rank-number"></span>
+                <img src="./photo_1/stright.jpg" alt="Smile 9">
+                <div class="photo-label">Smile 9</div>
+              </article>
+              <article class="photo-card" draggable="true" tabindex="0" data-id="smile-10" data-label="Smile 10">
+                <span class="rank-number"></span>
+                <img src="./photo_1/stright - 1mm into Green side without line.jpg" alt="Smile 10">
+                <div class="photo-label">Smile 10</div>
+              </article>
+              <article class="photo-card" draggable="true" tabindex="0" data-id="smile-11" data-label="Smile 11">
+                <span class="rank-number"></span>
+                <img src="./photo_1/stright - 2mm into Green side without line.jpg" alt="Smile 11">
+                <div class="photo-label">Smile 11</div>
+              </article>
+              <article class="photo-card" draggable="true" tabindex="0" data-id="smile-12" data-label="Smile 12">
+                <span class="rank-number"></span>
+                <img src="./photo_1/stright - 3mm into Green side without line.jpg" alt="Smile 12">
+                <div class="photo-label">Smile 12</div>
+              </article>
+            </div>
+          </div>
+          <div class="travel-panel">
+            <h3>Your smile preference order <span>(top = most preferred)</span></h3>
+            <div class="travel-order-list" id="travelOrderList" aria-label="Smile photos ordered from most to least preferred">
+              <p class="travel-drop-hint" id="travelDropHint">Drop smile photos here to rank them</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="submit-area">
+        <button type="submit">Submit Survey</button>
+      </div>
+    </form>
+
+
+  </main>
+
+  <script>
+    const languageText = {
+      en: {
+        title: "Smile Preference Survey", subtitle: "Compare the smiles and rank the photos by your personal preference",
+        instructionsLabel: "Instructions:", instructions: "Compare the smiles in the photos. For Questions 1 and 3, drag the photos into your preferred order. For Question 2, click the photos from your most preferred smile to your least preferred. There are no right or wrong answers.",
+        smiles1: "Question 1 — Smiles", smiles2: "Question 2 — Smiles", smiles3: "Question 3 — Smiles",
+        rankAll: "Rank all 4 photos", drinksHint: "Drag the photos to rank the smiles from most preferred to least preferred.",
+        foodHint: "Click the photos from your most preferred smile to your least preferred. Numbers appear in the order you select them.",
+        travelHint: "Drag each photo from the left into the ranking on the right. Put your most preferred smile at the top and your least preferred at the bottom. You can drag photos within the right column to change their order.",
+        available: "Available smile photos", preferenceOrder: "Your smile preference order", topMost: "(top = most preferred)", dropHint: "Drop smile photos here to rank them",
+        submit: "Submit Survey", results: "Thank You!", resultsHint: "Thank you for completing the survey. Your responses have been received on this page.",
+        travelAlert: "Please rank all 4 photos in Question 3 before submitting.",
+        labels: Object.fromEntries(Array.from({length:12}, (_,i)=>[`Smile ${i+1}`,`Smile ${i+1}`]))
+      },
+      ar: {
+        title: "استبيان تفضيلات الابتسامة", subtitle: "قارن الابتسامات ورتّب الصور وفقًا لتفضيلك الشخصي",
+        instructionsLabel: "التعليمات:", instructions: "قارن الابتسامات في الصور. في السؤالين الأول والثالث، اسحب الصور لترتيبها حسب تفضيلك. في السؤال الثاني، انقر على الصور بدءًا من الابتسامة الأكثر تفضيلًا حتى الأقل تفضيلًا. لا توجد إجابات صحيحة أو خاطئة.",
+        smiles1: "السؤال الأول — الابتسامات", smiles2: "السؤال الثاني — الابتسامات", smiles3: "السؤال الثالث — الابتسامات",
+        rankAll: "رتّب الصور الأربع", drinksHint: "اسحب الصور لترتيب الابتسامات من الأكثر تفضيلًا إلى الأقل تفضيلًا.",
+        foodHint: "انقر على الصور بدءًا من الابتسامة الأكثر تفضيلًا حتى الأقل. ستظهر الأرقام حسب ترتيب اختيارك.",
+        travelHint: "اسحب كل صورة من العمود الأيسر إلى قائمة الترتيب في العمود الأيمن. ضع الابتسامة الأكثر تفضيلًا في الأعلى والأقل تفضيلًا في الأسفل. يمكنك سحب الصور داخل العمود الأيمن لتغيير ترتيبها.",
+        available: "صور الابتسامات المتاحة", preferenceOrder: "ترتيب تفضيلات الابتسامات", topMost: "(الأعلى = الأكثر تفضيلًا)", dropHint: "أفلت صور الابتسامات هنا لترتيبها",
+        submit: "إرسال الاستبيان", results: "شكرًا لك!", resultsHint: "شكرًا لمشاركتك وإكمال الاستبيان. تم تسجيل اختياراتك في هذه الصفحة.",
+        travelAlert: "يرجى ترتيب الصور الأربع في السؤال الثالث قبل الإرسال.",
+        labels: Object.fromEntries(Array.from({length:12}, (_,i)=>[`Smile ${i+1}`,`ابتسامة ${i+1}`]))
+      }
+    };
+
+    function setLanguage(language) {
+      const t = languageText[language];
+      document.documentElement.lang = language;
+      document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+      document.body.classList.toggle("lang-ar", language === "ar");
+      document.title = t.title;
+      document.querySelector("header h1").textContent = t.title;
+      document.querySelector("header p").textContent = t.subtitle;
+      const instruction = document.querySelector(".instructions");
+      instruction.innerHTML = `<strong>${t.instructionsLabel}</strong> ${t.instructions}`;
+      const sections = {
+        smiles1: document.querySelector('[data-question="smiles1"]'),
+        smiles2: document.querySelector('[data-question="smiles2"]'),
+        smiles3: document.querySelector('[data-question="smiles3"]')
+      };
+      Object.entries(sections).forEach(([key, section]) => {
+        section.querySelector("h2").textContent = t[key];
+        section.querySelector(".count").textContent = t.rankAll;
+      });
+      sections.smiles1.querySelector(".hint").textContent = t.drinksHint;
+      sections.smiles2.querySelector(".hint").textContent = t.foodHint;
+      sections.smiles3.querySelector(".hint").textContent = t.travelHint;
+      sections.smiles3.querySelectorAll(".travel-panel h3")[0].textContent = t.available;
+      sections.smiles3.querySelectorAll(".travel-panel h3")[1].innerHTML = `${t.preferenceOrder} <span>${t.topMost}</span>`;
+      document.getElementById("travelDropHint").textContent = t.dropHint;
+      document.querySelector('.submit-area button[type="submit"]').textContent = t.submit;
+      document.getElementById("thankyouTitle").textContent = t.results;
+      document.getElementById("thankyouMessage").textContent = t.resultsHint;
+      document.getElementById("closeThankyou").textContent = language === "ar" ? "إغلاق" : "Close";
+      document.querySelectorAll(".photo-card").forEach(card => {
+        const englishLabel = card.dataset.labelEnglish || card.dataset.label;
+        card.dataset.labelEnglish = englishLabel;
+        card.dataset.label = t.labels[englishLabel] || englishLabel;
+        const img = card.querySelector("img");
+        if (img) img.alt = card.dataset.label;
+        const label = card.querySelector(".photo-label");
+        if (label) label.textContent = card.dataset.label;
+      });
+      window.currentLanguage = language;
+      document.getElementById("languageOverlay").style.display = "none";
+    }
+
+    document.getElementById("chooseEnglish").addEventListener("click", () => setLanguage("en"));
+    document.getElementById("chooseArabic").addEventListener("click", () => setLanguage("ar"));
+
+    const lists = document.querySelectorAll(".photo-list");
+    let draggedCard = null;
+
+    function updateRanks(list) {
+      // Food ranks are assigned only when the user clicks a photo.
+      if (list.closest('[data-question="smiles2"]')) return;
+      list.querySelectorAll(".photo-card").forEach((card, index) => {
+        card.querySelector(".rank-number").textContent = index + 1;
+      });
+    }
+
+    function updateAllRanks() {
+      lists.forEach(updateRanks);
+    }
+
+    document.querySelectorAll(".photo-card").forEach(card => {
+      card.addEventListener("dragstart", event => {
+        draggedCard = card;
+        card.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", card.dataset.id);
+      });
+
+      card.addEventListener("dragend", () => {
+        card.classList.remove("dragging");
+        lists.forEach(list => list.classList.remove("drop-target"));
+        draggedCard = null;
+        updateAllRanks();
+      });
+    });
+
+    lists.forEach(list => {
+      list.addEventListener("dragover", event => {
+        event.preventDefault();
+        if (!draggedCard || draggedCard.parentElement !== list) return;
+
+        const afterElement = getDragAfterElement(list, event.clientX, event.clientY);
+        if (afterElement) {
+          list.insertBefore(draggedCard, afterElement);
+        } else {
+          list.appendChild(draggedCard);
+        }
+        list.classList.add("drop-target");
+      });
+
+      list.addEventListener("dragleave", event => {
+        if (!list.contains(event.relatedTarget)) list.classList.remove("drop-target");
+      });
+
+      list.addEventListener("drop", event => {
+        event.preventDefault();
+        list.classList.remove("drop-target");
+        updateRanks(list);
+      });
+    });
+
+    // Find the card whose midpoint is just after the pointer.
+    // Supports both the desktop grid and the responsive two-column grid.
+    function getDragAfterElement(container, x, y) {
+      const cards = [...container.querySelectorAll(".photo-card:not(.dragging)")];
+      if (cards.length === 0) return null;
+
+      const pointerRow = [];
+      let nearestRowY = null;
+
+      // Find the row closest to the pointer using card vertical centers.
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const centerY = rect.top + rect.height / 2;
+        if (nearestRowY === null || Math.abs(centerY - y) < Math.abs(nearestRowY - y)) {
+          nearestRowY = centerY;
+        }
+      }
+
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const centerY = rect.top + rect.height / 2;
+        if (Math.abs(centerY - nearestRowY) < rect.height * 0.6) {
+          pointerRow.push({ card, centerX: rect.left + rect.width / 2 });
+        }
+      }
+
+      pointerRow.sort((a, b) => a.centerX - b.centerX);
+      const targetInRow = pointerRow.find(item => x < item.centerX);
+      if (targetInRow) return targetInRow.card;
+
+      // If the pointer is after every card in its row, insert after that row.
+      const lastCardInRow = pointerRow[pointerRow.length - 1]?.card;
+      if (!lastCardInRow) return null;
+      const lastRect = lastCardInRow.getBoundingClientRect();
+      const allCards = [...container.querySelectorAll(".photo-card:not(.dragging)")];
+      const nextRowCard = allCards.find(card => {
+        const rect = card.getBoundingClientRect();
+        return rect.top > lastRect.top + lastRect.height / 2;
+      });
+      return nextRowCard || null;
+    }
+
+    // Question 3: move travel photos from the left bank to a vertical ranking on the right.
+    const travelBank = document.getElementById("travelPhotoBank");
+    const travelOrder = document.getElementById("travelOrderList");
+    const travelDropHint = document.getElementById("travelDropHint");
+
+    function updateTravelRanks() {
+      const rankedCards = [...travelOrder.querySelectorAll(".photo-card")];
+      rankedCards.forEach((card, index) => {
+        card.querySelector(".rank-number").textContent = index + 1;
+        card.setAttribute("aria-label", card.dataset.label + ", preference rank " + (index + 1));
+      });
+      travelBank.querySelectorAll(".photo-card").forEach(card => {
+        card.querySelector(".rank-number").textContent = "";
+        card.setAttribute("aria-label", card.dataset.label + ", not ranked");
+      });
+      travelDropHint.hidden = rankedCards.length > 0;
+    }
+
+    [travelBank, travelOrder].forEach(zone => {
+      zone.addEventListener("dragover", event => {
+        event.preventDefault();
+        if (!draggedCard || ![travelBank, travelOrder].includes(draggedCard.parentElement)) return;
+        event.dataTransfer.dropEffect = "move";
+        zone.classList.add("drop-target");
+        if (zone === travelOrder && draggedCard.parentElement === travelOrder) {
+          const afterElement = getTravelAfterElement(zone, event.clientY);
+          if (afterElement) zone.insertBefore(draggedCard, afterElement);
+          else zone.appendChild(draggedCard);
+        }
+      });
+      zone.addEventListener("dragleave", event => {
+        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drop-target");
+      });
+      zone.addEventListener("drop", event => {
+        event.preventDefault();
+        zone.classList.remove("drop-target");
+        if (!draggedCard || ![travelBank, travelOrder].includes(draggedCard.parentElement)) return;
+        if (zone === travelBank) {
+          travelBank.appendChild(draggedCard);
+        } else if (draggedCard.parentElement !== travelOrder) {
+          const afterElement = getTravelAfterElement(zone, event.clientY);
+          if (afterElement) zone.insertBefore(draggedCard, afterElement);
+          else zone.appendChild(draggedCard);
+        }
+        updateTravelRanks();
+      });
+    });
+
+    function getTravelAfterElement(container, y) {
+      const cards = [...container.querySelectorAll(".photo-card:not(.dragging)")];
+      return cards.reduce((closest, card) => {
+        const rect = card.getBoundingClientRect();
+        const offset = y - (rect.top + rect.height / 2);
+        if (offset < 0 && offset > closest.offset) return { offset, element: card };
+        return closest;
+      }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+    }
+
+    // Keep the travel ranking updated when a drag finishes.
+    travelBank.querySelectorAll(".photo-card").forEach(card => {
+      card.addEventListener("dragend", updateTravelRanks);
+    });
+    travelOrder.addEventListener("dragend", updateTravelRanks);
+
+    // Keyboard-accessible alternative: focus a card and use Alt + Arrow keys to reorder it.
+    document.querySelectorAll(".photo-card").forEach(card => {
+      card.addEventListener("keydown", event => {
+        if (!event.altKey || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+        event.preventDefault();
+        const list = card.parentElement;
+        const cards = [...list.querySelectorAll(".photo-card")];
+        const index = cards.indexOf(card);
+        const moveEarlier = ["ArrowLeft", "ArrowUp"].includes(event.key);
+        const target = cards[index + (moveEarlier ? -1 : 1)];
+        if (!target) return;
+
+        if (moveEarlier) list.insertBefore(card, target);
+        else list.insertBefore(target, card);
+        updateRanks(list);
+        card.focus();
+      });
+    });
+
+
+    // Question 2: rank food images in the exact order the user clicks them.
+    const foodSection = document.querySelector('[data-question="smiles2"]');
+    const foodCards = [...foodSection.querySelectorAll(".photo-card")];
+    let nextFoodRank = 1;
+
+    foodCards.forEach(card => {
+      const badge = card.querySelector(".rank-number");
+      badge.textContent = "";
+      card.setAttribute("aria-label", card.dataset.label + ", not ranked");
+      card.addEventListener("click", () => {
+        const currentRank = Number(card.dataset.rank || 0);
+
+        if (currentRank) {
+          // Clicking a ranked image removes its rank and closes the gap.
+          card.removeAttribute("data-rank");
+          foodCards.forEach(other => {
+            const rank = Number(other.dataset.rank || 0);
+            if (rank > currentRank) other.dataset.rank = String(rank - 1);
+          });
+        } else {
+          card.dataset.rank = String(nextFoodRank++);
+        }
+
+        // Recalculate ranks from stored selections to keep numbering continuous.
+        const ranked = foodCards
+          .filter(item => item.dataset.rank)
+          .sort((a, b) => Number(a.dataset.rank) - Number(b.dataset.rank));
+        ranked.forEach((item, index) => {
+          item.dataset.rank = String(index + 1);
+        });
+        nextFoodRank = ranked.length + 1;
+
+        foodCards.forEach(item => {
+          const rank = item.dataset.rank || "";
+          item.querySelector(".rank-number").textContent = rank;
+          item.classList.toggle("selected", Boolean(rank));
+          item.setAttribute("aria-label", item.dataset.label + (rank ? ", preference rank " + rank : ", not ranked"));
+        });
+      });
+    });
+
+    function collectResults() {
+      const results = {};
+      document.querySelectorAll(".survey-section").forEach(section => {
+        const question = section.dataset.question;
+        let cards = [...section.querySelectorAll(".photo-card")];
+        if (question === "smiles3") {
+          cards = [...section.querySelector("#travelOrderList").querySelectorAll(".photo-card")];
+          results[question] = cards.map((card, index) => ({
+            rank: index + 1,
+            imageId: card.dataset.id,
+            label: card.dataset.label
+          }));
+        } else if (question === "smiles2") {
+          cards.sort((a, b) => Number(a.dataset.rank || 999) - Number(b.dataset.rank || 999));
+          results[question] = cards.map(card => ({
+            rank: Number(card.dataset.rank || 0),
+            imageId: card.dataset.id,
+            label: card.dataset.label
+          }));
+        } else {
+          results[question] = cards.map((card, index) => ({
+            rank: index + 1,
+            imageId: card.dataset.id,
+            label: card.dataset.label
+          }));
+        }
+      });
+      return results;
+    }
+
+    let latestResults = null;
+
+    document.getElementById("surveyForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const travelRankedCount = travelOrder.querySelectorAll(".photo-card").length;
+      if (travelRankedCount !== 4) {
+        alert(languageText[window.currentLanguage || "en"].travelAlert);
+        return;
+      }
+      latestResults = collectResults();
+      document.getElementById("thankyouOverlay").style.display = "flex";
+      document.getElementById("closeThankyou").focus();
+    });
+
+
+
+    document.getElementById("closeThankyou").addEventListener("click", () => {
+      document.getElementById("thankyouOverlay").style.display = "none";
+    });
+    document.getElementById("thankyouOverlay").addEventListener("click", event => {
+      if (event.target.id === "thankyouOverlay") event.currentTarget.style.display = "none";
+    });
+
+    updateAllRanks();
+  </script>
+</body>
+</html>
